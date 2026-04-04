@@ -1,4 +1,4 @@
-# clubxcx
+# DeltaClub-Dispatch
 
 - **小程序**：见 [`miniapp/README.md`](miniapp/README.md)。  
 - **后端 API（NestJS）**：见 [`server/README.md`](server/README.md)；`GET /health`；**Phase 1**：`POST /api/v1/auth/wechat/login`（见 `plan/backend/B1-1-微信登录与用户表.md`）。  
