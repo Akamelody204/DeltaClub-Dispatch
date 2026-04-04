@@ -1,0 +1,12 @@
+# 本地开发：MySQL 8（与 plan/backend/B0-3 一致）
+# 使用：在 server/ 目录执行 docker compose up -d
+
+services:
+  mysql:
+    image: mysql:8
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: clubxcx
+    ports:
+      - "3306:3306"
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci

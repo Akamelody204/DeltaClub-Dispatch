@@ -1,0 +1,88 @@
+# clubxcx · Cursor 规则（由当前 `server/` 与 `miniapp/` 实践归纳）
+
+## 总览
+
+- **后端**：NestJS + TypeScript，全局前缀 `api/v1`（`GET /health` 除外）；统一响应 **Envelope**：`{ code, message, data }`。
+- **小程序**：UniApp + Vue3 + TypeScript；`@/` 路径别名；API 经 **`utils/request.ts`** 封装，成功返回 `data`，失败 **`throw Error(message)`**。
+
+---
+
+## 目录与分层
+
+### server/
+
+- **按领域分模块**：`auth/`、`order/`、`admin/`、`health/`、`wechat/`、`user/`。
+- **每个领域**：`*.module.ts`、`*controller.ts`、`*service.ts`；实体 `*.entity.ts`；请求体验证放在 **`dto/`**（如 `wechat-login.dto.ts`，**kebab-case + `.dto.ts`**）。
+- **横切**：`common/filters/http-exception.filter.ts`（全局异常）、`common/exceptions/api.exception.ts`（业务异常）。
+- **认证**：`auth/guards/`、`auth/decorators/`、`jwt-payload.ts`。
+- **入口**：`main.ts` 注册全局 Filter、ValidationPipe、全局前缀；`app.module.ts` 聚合模块与 TypeORM。
+
+### miniapp/
+
+- **`pages/`**：按业务分子目录（如 `order/`、`companion/`、`auth/`、`mine/`、`home/`），与 `pages.json` 路由一致。
+- **`api/`**：按域拆文件（如 `auth.ts`、`orders.ts`、`companion.ts`），**只负责拼 path + 调 `request`**，不写页面逻辑。
+- **`utils/`**：`request.ts`（统一请求）、`debugLog.ts`（调试日志）、`api-error.ts` / `unauthorized.ts`（错误与登出处理）。
+- **`constants/`**：`copy.ts`（用户可见文案真源）、`storage-keys.ts`、`auth-routes.ts`。
+- **`types/`**：与后端契约对齐的 TS 类型（如 `api.ts` 的 `ApiEnvelope`）。
+- **`config/env.ts`**：环境变量与 `API_BASE_URL`；**`boot/`**、**`composables/`** 用于启动与可复用逻辑。
+
+---
+
+## 接口与路由命名
+
+### 后端
+
+- **HTTP 路径**：小写 + **kebab 风格分段**，如 `@Controller('auth')` + `@Post('wechat/login')` → `/api/v1/auth/wechat/login`。
+- **资源名**：复数 `orders`；路径参数用 **camelCase** 语义名，如 `:orderId`。
+- **成功响应**：在 Controller 中显式 `return { code: 0, message: 'ok', data }` 或 `data: null`。
+- **业务错误码**：`ApiException(businessCode, message, httpStatus)`，与接口表约定一致（如 `40001` 参数/业务、`40101` 等）；**禁止**把堆栈或 SQL 返回给客户端。
+
+### 小程序
+
+- **`request()` 的 `path`**：以 `/` 开头，**含完整前缀**，如 `"/api/v1/me"`（见 `RequestOptions` 注释）。
+- **API 封装函数**：动词 + 资源，如 `postWechatLogin`、`getMe`、`postLogout`；文件内用注释标明 **HTTP 方法与路径**。
+
+---
+
+## 变量与类型命名
+
+- **TypeScript 通用**：`camelCase` 变量/函数、`PascalCase` 类/接口/类型、`UPPER_SNAKE` 仅用于稳定常量枚举（如订单状态字符串 `'PENDING_GRAB'`）。
+- **DTO 属性**：与后端字段一致，**camelCase**（如 `designatedCompanionUserId`）。
+- **JWT payload**：`sub`、`role`、`openid` 等与 `jwt-payload` 一致。
+
+---
+
+## 错误与日志
+
+### 后端
+
+- **业务可预期错误**：`throw new ApiException(code, message, HttpStatus)`。
+- **校验失败**：`ValidationPipe` 的 `exceptionFactory` 转为 **`ApiException(40001, ...)`**。
+- **未知异常**：`HttpExceptionFilter` 将非 HttpException 映射为 **`code: 50000`** 与 HTTP 500，body 仍为 `{ code, message, data: null }`。
+- **日志**：当前以框架与异常过滤为主；若新增结构化日志，保持**不打印密钥、token、完整 SQL**。
+
+### 小程序
+
+- **请求失败**：`request()` 在 `code !== 0` 或 HTTP 非 2xx 时 **`reject(new Error(用户可读文案))`**；业务码映射见 **`constants/copy.ts`**（`mapBusinessCodeToMessage`）。
+- **401 / 40101**：走 **`handleUnauthorized`**，与路由守卫配合。
+- **页面展示错误**：优先用 **`userMessageFromError`**（`utils/api-error.ts`）从 `Error.message` 取文案。
+- **调试日志**：仅通过 **`debugLog(tag, ...args)`**，且受 **`VITE_APP_DEBUG_LOG` / 开发模式** 控制；禁止在提交代码中保留无门控的 `console.log` 业务敏感信息。
+
+---
+
+## 文案与契约
+
+- **用户可见中文**：优先来自 **`miniapp/src/constants/copy.ts`**，重大变更需与 **`plan/product/dev/`** 文案包、映射表对齐（见 `copy.ts` 顶部注释）。
+- **订单状态等枚举**：与 **`docs/STATE_MACHINE.md`**、产品 P2-1 冻结流程对齐；服务端 **`order-status.ts`** 与小程序展示文案保持可追溯注释。
+
+---
+
+## 新增代码时请遵守
+
+1. **后端**新增接口：补 Controller 路由、DTO、必要时 `ApiException`；成功体保持 **`{ code: 0, message: 'ok', data }`** 形状。
+2. **小程序**新增接口：在 **`api/`** 增加函数，使用 **`request<T>()`**，路径与 **`docs/API_CONTRACT.md` / 接口表** 一致。
+3. **不要**在小程序端写死 `API_BASE_URL`；**不要**在仓库提交含真实密钥的 `.env`。
+
+---
+
+*本文件随仓库结构演进可修订；与 `plan/`、`docs/` 冲突时以负责人裁定为准。*
