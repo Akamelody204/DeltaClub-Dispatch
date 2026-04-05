@@ -65,8 +65,9 @@ curl -s "http://127.0.0.1:3000/api/v1/companion/orders/ongoing?page=1&pageSize=2
 
 ## 文档
 
-- **B1-1**：`../plan/backend/B1-1-微信登录与用户表.md`
-- **B1-3**：`../plan/backend/B1-3-订单表与CRUD草稿.md`
-- **B1-4（管理端）**：`../plan/backend/B1-4-管理端鉴权与占位接口.md`（配置 `ADMIN_USERNAME` + `ADMIN_PASSWORD_HASH`）  
-- **B1-5（staging）**：`../plan/backend/B1-5-staging部署与合法域名.md` · 技术步骤：`docs/DEPLOY-STAGING.md` · 环境模板：`.env.staging.example`
+- **B1-1**：`../plan/backend/dev/B1-1-微信登录与用户表.md`
+- **B1-3**：`../plan/backend/dev/B1-3-订单表与CRUD草稿.md`
+- **B1-4（管理端）**：`../plan/backend/dev/B1-4-管理端鉴权与占位接口.md`（配置 `ADMIN_USERNAME` + `ADMIN_PASSWORD_HASH`）  
+- **B1-5（staging）**：`../plan/backend/dev/B1-5-staging部署与合法域名.md` · 技术步骤：`docs/DEPLOY-STAGING.md` · 环境模板：`.env.staging.example`
+- **B1-6（迁移）**：`../plan/backend/dev/B1-6-数据库迁移与Schema演进.md` · **`docs/MIGRATIONS.md`**
 - **接口契约**：`../plan/product/dev/接口表-v0.md`、`../docs/API_CONTRACT.md`
