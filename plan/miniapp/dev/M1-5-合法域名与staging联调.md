@@ -20,7 +20,7 @@
 
 | 项 | 要求 |
 |----|------|
-| **API 根 URL** | **仅根**，**无** `/api/v1` 后缀，**无**尾斜杠；与 `miniapp/.env.staging` 中 **`VITE_APP_API_BASE_URL`** 一致（例：`https://api-staging.example.com`）。 |
+| **API 根 URL** | **仅根**，**无** `/api/v1` 后缀，**无**尾斜杠；与 `miniapp/.env.staging` 中 **`VITE_APP_API_BASE_URL`** 一致（当前：`https://api-staging.akamelody.online`）。 |
 | **构建命令** | `npm run build:mp-weixin:staging`（读取 `.env.staging`；本机真值可用 **`.env.staging.local`** 覆盖，已 gitignore）。 |
 | **微信后台** | **开发 → 开发管理 → 开发设置 → 服务器域名 → request 合法域名**：填写 **与上表同一根**（协议 + 域名，路径不写）。 |
 
@@ -49,10 +49,13 @@
 
 ## 5. 联调验证（建议顺序）
 
-1. 本地改 **`miniapp/.env.staging.local`**（新建）：`VITE_APP_API_BASE_URL=https://<真实 staging 根>`。  
+1. 确认 **`miniapp/.env.staging`** 中 **`VITE_APP_API_BASE_URL`** 为 staging 根（已与仓库一致）；个人本机可另建 **`.env.staging.local`** 覆盖。  
 2. `npm run build:mp-weixin:staging`，导入 `dist/build/mp-weixin`。  
-3. 真机：打开小程序 → 登录（或 **我的** / 首页触发 `GET /me`）→ **订单列表** 等带 token 请求。  
-4. 期望：无「不在以下 request 合法域名列表中」；接口返回正常或业务错误（非域名失败）。
+3. **微信公众平台** → **request 合法域名** 已添加同一根：`https://api-staging.akamelody.online`（仅根、无路径）。  
+4. 真机：打开小程序 → 登录（或 **我的** / 首页触发 `GET /me`）→ **订单列表** 等带 token 请求。  
+5. 期望：无「不在以下 request 合法域名列表中」；接口返回正常或业务错误（非域名失败）。
+
+> **说明**：在 CI/IDE 沙箱内 `curl` 访问 staging 若出现连接重置，多为环境网络限制，**以真机与微信开发者工具（关闭「不校验合法域名」时）为准**。
 
 ---
 
@@ -61,7 +64,7 @@
 | 产出 | 说明 |
 |------|------|
 | **配置完成** | 微信后台 **request 合法域名** 已保存（截图或运营书面确认，**勿**含密钥）。 |
-| **工程一致** | 仓库内 **`.env.staging`** 仍为占位亦可；**团队共用真值** 建议 **`.env.staging.local`** 或个人不提交分支策略（与 **M0-3** 一致）。 |
+| **工程一致** | 仓库内 **`.env.staging`** 已填团队 staging 根；个人差异仍可用 **`.env.staging.local`**（与 **M0-3** 一致）。 |
 | **接口表（可选）** | staging 真值回填 **`../../product/dev/接口表-v0.md` §1.1**（与 **B0-2 §5** 说明一致）。 |
 
 **完成标志（M1-5）**
@@ -76,3 +79,4 @@
 | 版本 | 日期 | 说明 |
 |------|------|------|
 | v0.1 | 2026-04-04 | 初稿：对齐 B1-5、Phase0 收口、设计改动清单阅读结论 |
+| v0.2 | 2026-04-07 | `.env.staging` 填入 `https://api-staging.akamelody.online`；§5 增补微信后台与沙箱 curl 说明 |

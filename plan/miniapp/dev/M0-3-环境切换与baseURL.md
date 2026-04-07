@@ -67,7 +67,8 @@
 - [x] `src/config/env.ts` 提供 `API_BASE_URL`、`APP_ENV`、`DEBUG_LOG`。  
 - [x] `npm run build:mp-weixin` 与 `npm run build:mp-weixin:staging` 均可成功构建。  
 - [x] `miniapp/README.md` 含环境变量与命令说明。  
-- [ ] 真实 staging/production 域名确定后，更新对应 `.env` 或 **`.env.staging.local`**（**M1-5** 验收勾选）。
+- [x] 真实 **staging** 域名已写入 **`miniapp/.env.staging`**（`https://api-staging.akamelody.online`）；production 仍以占位或上线前替换。  
+- [ ] **M1-5** 真机验收勾选见 **`M1-5-合法域名与staging联调.md`** §6。
 
 ---
 
@@ -76,3 +77,4 @@
 | 版本 | 日期 | 说明 |
 |------|------|------|
 | v0.1 | 2026-04-03 | 初稿：Vite 三环境、staging 构建脚本、config/env、debugLog、我的页调试条 |
+| v0.2 | 2026-04-07 | staging 真值已入 `.env.staging`；§6 完成标志更新 |

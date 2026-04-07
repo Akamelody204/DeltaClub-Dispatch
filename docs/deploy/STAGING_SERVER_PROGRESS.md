@@ -13,7 +13,11 @@
 - **服务器基础环境已基本就绪**：SSH、Node.js、npm、MySQL、Nginx、pm2 已完成安装或验证。  
 - **仓库已拉到服务器**：`~/DeltaClub-Dispatch`。  
 - **数据库迁移已执行成功**：`users`、`orders`、`typeorm_migrations` 已按 baseline migration 建表。  
-- **当前阻塞点**：Nest 启动时 `OrdersModule` 无法解析 `JwtAuthGuard` 所需的 `JwtService`；本地仓库已修复，待同步到 GitHub 并让服务器重新拉取。  
+- **后端服务已启动并通过健康检查**：`curl http://127.0.0.1:3000/health` 返回 `code=0`、`status=ok`。  
+- **pm2 已接管并完成开机自启**：当前服务名为 `clubxcx-api-staging`。  
+- **Nginx 反向代理已完成并通过公网验证**：公网 IP 访问 `/health` 已成功返回健康检查 JSON。  
+- **staging 域名与 HTTPS 已完成**：`https://api-staging.akamelody.online/health` 返回 `200 OK` 与健康检查 JSON。  
+- **当前下一步**：进入微信公众平台配置 `request` 合法域名，并让小程序切换到 staging 基础地址。  
 
 ---
 
@@ -60,6 +64,49 @@
   - `npm run build`
   - `npm run migration:run:dist`
 - baseline migration 执行成功。  
+
+### 1.6 应用启动与托管
+
+- 已从 GitHub 拉取包含 `OrdersModule` 修复的新版本代码。  
+- 已重新执行 `npm run build`。  
+- 已验证 `NODE_ENV=staging node dist/main.js` 可正常启动。  
+- 已通过本机健康检查：
+  - `curl -s http://127.0.0.1:3000/health`
+- 已使用 pm2 托管：
+  - 进程名：`clubxcx-api-staging`
+  - 状态：`online`
+- 已完成 pm2 开机自启：
+  - `pm2 save`
+  - `pm2 startup`
+  - systemd 已创建 `pm2-ubuntu.service`
+
+### 1.7 Nginx 反向代理与公网验证
+
+- 已修改 `/etc/nginx/sites-available/default`，将 `location /` 代理到 `http://127.0.0.1:3000`。  
+- 已执行：
+  - `sudo nginx -t`
+  - `sudo systemctl reload nginx`
+  - `sudo systemctl status nginx --no-pager`
+- 已确认 Nginx 状态为 `active (running)`。  
+- 已验证本机通过 Nginx 访问：
+  - `curl -s http://127.0.0.1/health`
+- 已验证公网通过服务器 IP 访问：
+  - `http://124.220.101.133/health`
+
+### 1.8 域名与 HTTPS 准备
+
+- 已确定 staging 域名为：`api-staging.akamelody.online`。  
+- 已在 DNS 中添加 A 记录，将该子域名指向服务器公网 IP：`124.220.101.133`。  
+- 已确认 DNS 解析生效，`api-staging.akamelody.online` 可解析到 `124.220.101.133`。  
+- 已将 Nginx `server_name` 从 `_` 改为 `api-staging.akamelody.online`。  
+- 已安装：
+  - `certbot`
+  - `python3-certbot-nginx`
+- 已使用 Certbot / Let’s Encrypt 为 `api-staging.akamelody.online` 签发并部署 HTTPS 证书。  
+- 已验证：
+  - `curl -I https://api-staging.akamelody.online/health`
+  - `curl -s https://api-staging.akamelody.online/health`
+- 当前域名 HTTPS 访问已打通。  
 
 ---
 
@@ -121,42 +168,98 @@
 
 - 本地代码已修复：在 `server/src/order/orders.module.ts` 中为 `imports` 增加 `AuthModule`。  
 - 本地 `npm run build` 已验证通过。  
-- 当前待办：将该修复成功推送到 GitHub，并在服务器端 `git pull` 后重新构建启动。  
+- 后续处理结果：修复已推送到 GitHub，服务器 `git pull`、`npm run build` 后启动成功。  
+
+### 2.5 pm2 日志命令看似“卡住”
+
+**现象**
+
+- 执行 `pm2 logs clubxcx-api-staging --lines 50` 后终端一直停在 `[TAILING]`。  
+
+**原因**
+
+- `pm2 logs` 是持续追踪日志命令，不会像普通命令一样自动退出。  
+
+**处理**
+
+- 使用 `Ctrl + C` 退出日志跟随模式。  
+- 后续将其视为“查看实时日志”的命令，而非一次性检查命令。  
+
+### 2.6 Nginx 变量名拼写错误
+
+**现象**
+
+- 执行 `sudo nginx -t` 时提示：  
+  `unknown "proxy_add_x_forward_for" variable`
+
+**原因**
+
+- `X-Forwarded-For` 对应的 Nginx 变量名拼写错误，误写为：
+  - `$proxy_add_x_forward_for`
+- 正确写法应为：
+  - `$proxy_add_x_forwarded_for`
+
+**处理**
+
+- 修正变量名后重新执行：
+  - `sudo nginx -t`
+  - `sudo systemctl reload nginx`
+- 修复后 Nginx 校验与反代均通过。  
+
+### 2.7 Certbot / HTTPS 配置
+
+**现象**
+
+- 在域名解析生效后，需要为 staging 域名启用 HTTPS。  
+
+**处理**
+
+- 将 Nginx `server_name` 切换为：
+  - `api-staging.akamelody.online`
+- 安装：
+  - `certbot`
+  - `python3-certbot-nginx`
+- 执行：
+  - `sudo certbot --nginx -d api-staging.akamelody.online`
+- 结果：
+  - 证书签发成功
+  - Nginx 自动接入证书成功
+  - `https://api-staging.akamelody.online/health` 返回 `200 OK`
 
 ---
 
-## 3. 当前阻塞点
+## 3. 当前状态
 
-- **代码同步阻塞**：`OrdersModule` 的修复尚未稳定同步到服务器当前副本。  
-- **应用尚未成功启动**：因此 `/health` 还未完成服务器本机验证。  
-- **域名 / HTTPS 尚未进入正式配置阶段**：当前仍处于后端服务可启动验证阶段。  
+- **后端应用已可本机访问**：`127.0.0.1:3000/health` 可返回健康检查 JSON。  
+- **pm2 托管与开机自启已完成**。  
+- **Nginx 反代与公网 IP 访问已完成**。  
+- **域名解析与 HTTPS 已完成**：`api-staging.akamelody.online` 已可正常访问 `/health`。  
+- **待完成项已收敛到小程序接入**：下一步是微信合法域名配置与小程序切换 staging 地址。  
 
 ---
 
 ## 4. 下一步操作
 
-1. 将本地修复后的 `orders.module.ts` 成功推送到 GitHub。  
-2. 服务器执行：
+1. 在微信公众平台配置 `request` 合法域名为：
 
-   ```bash
-   cd ~/DeltaClub-Dispatch
-   git pull
-   cd server
-   npm run build
-   NODE_ENV=staging node dist/main.js
+   ```text
+   https://api-staging.akamelody.online
    ```
 
-3. 另开终端验证：
+2. 在小程序 staging 环境中，将后端基础地址切换为：
 
-   ```bash
-   curl -s http://127.0.0.1:3000/health
+   ```text
+   https://api-staging.akamelody.online
    ```
 
-4. 若本机验证通过，再进入：
-   - pm2 常驻
-   - Nginx 反代
-   - HTTPS 证书
-   - 微信 request 合法域名
+3. 进行真机联调，优先验证：
+   - 健康检查
+   - 微信登录链路
+   - 下单 / 我的订单等最小闭环
+
+4. 完成联调后，再视需要补充：
+   - Certbot 自动续期 dry-run 验证
+   - Nginx 更细的安全头与日志策略
 
 ---
 
